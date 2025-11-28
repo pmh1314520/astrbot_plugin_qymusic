@@ -1,9 +1,10 @@
-# helloworld
+# 明航音乐（AstrBot插件）
 
-AstrBot 插件模板
+开发者：青云制作_彭明航
 
-A template plugin for AstrBot plugin feature
+一款由彭明航独立开发的AstrBot插件，专门用于获取全网免费音乐。
 
-# 支持
+# 插件命令
 
-[帮助文档](https://astrbot.app)
+1、音乐 搜索 <音乐名>
+2、音乐 播放 <音乐ID>
