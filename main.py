@@ -51,10 +51,10 @@ class MyPlugin(Star):
             reply_message += (
                 f"{index}、{song.get('album', '未知歌曲名')}\n"
                 f"🎤 歌手: {artists_str}\n"
-                f"📟 音乐ID: `{song['pic_id']}`\n\n"
+                f"📟 音乐ID: `{song['id']}`\n\n"
             )
         
-        reply_message += "💡 请使用 `/音乐.播放 <播放ID>` 来点播歌曲。"
+        reply_message += "💡 请使用 `音乐 播放 <音乐ID>` 来点播歌曲。"
         
         yield event.plain_result(reply_message)
 
@@ -62,12 +62,12 @@ class MyPlugin(Star):
     async def 播放音乐(self, event: AstrMessageEvent, MusicId: str):
         '''音乐 播放 音乐ID：该指令用于获取音乐，并以语音形式发给用户。'''
         api_url = "https://music.pmhs.top/song"
-        params = {'pic_id': MusicId}
+        params = {'id': MusicId}
 
         # 创建一个临时目录用于存放下载和转换的文件
         temp_dir = tempfile.mkdtemp()
-        conversion_successful = False # 标记转换是否成功
-        
+        conversion_successful = False  # 标记转换是否成功
+
         try:
             # 1. 获取音乐URL
             async with self.session.get(api_url, params=params) as response:
@@ -77,9 +77,9 @@ class MyPlugin(Star):
             if not song_data or 'url' not in song_data:
                 yield event.plain_result(f"抱歉，无法找到ID为 `{MusicId}` 的歌曲播放链接。")
                 return
-            
+
             song_url = song_data['url']
-            
+
             # 定义文件路径
             downloaded_file_path = os.path.join(temp_dir, f"{MusicId}.mp3")
             wav_file_path = os.path.join(temp_dir, f"{MusicId}.wav")
@@ -95,7 +95,7 @@ class MyPlugin(Star):
             # 3. 转换为WAV格式
             yield event.plain_result("🔄 正在转换音频格式...")
             await asyncio.to_thread(self._convert_to_wav, downloaded_file_path, wav_file_path)
-            
+
             # 4. 发送WAV文件
             chain = [
                 Comp.At(qq=event.get_sender_id()),
@@ -104,22 +104,28 @@ class MyPlugin(Star):
             ]
             yield event.chain_result(chain)
 
+            # --- 关键修改点 ---
+            # 只有在成功发送语音后，才认为整个过程成功
+            conversion_successful = True
+
         except aiohttp.ClientError as e:
             yield event.plain_result(f"❌ 下载音乐失败: {e}")
         except Exception as e:
-            # 捕获 pydub 可能抛出的异常（如文件损坏无法解码）
+            # 捕获转换或发送过程中可能发生的异常
             yield event.plain_result(f"❌ 处理音乐时发生错误: {e}")
             # 关键：在失败时，打印出临时目录的路径
             yield event.plain_result(f"🔍 调试信息：失败的文件已保存在临时目录，请查看：\n`{temp_dir}`")
         finally:
-            # 5. 清理临时文件 (仅在成功时清理)
+            # 5. 清理临时文件
             if conversion_successful:
                 try:
                     shutil.rmtree(temp_dir)
+                    print(f"成功，临时目录 {temp_dir} 已清理。")
                 except OSError as e:
                     print(f"清理临时目录时出错: {e}")
             else:
                 print(f"转换失败，临时目录 {temp_dir} 已保留，请手动检查。")
+
 
     def _convert_to_wav(self, input_path: str, output_path: str):
         """一个同步的辅助函数，跨平台调用 ffmpeg 进行转换。"""
