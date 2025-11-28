@@ -93,14 +93,13 @@ class MyPlugin(Star):
                         f.write(chunk)
 
             # 3. 转换为WAV格式
-            yield event.plain_result("🔄 正在转换音频格式...")
+            yield event.plain_result("🔄 正在将音乐转为语音中...")
             await asyncio.to_thread(self._convert_to_wav, downloaded_file_path, wav_file_path)
 
             # 4. 发送WAV文件
             chain = [
                 Comp.At(qq=event.get_sender_id()),
                 Comp.Record(file=wav_file_path, url=wav_file_path),
-                Comp.Plain("🎵 音乐发送完毕~")
             ]
             yield event.chain_result(chain)
 
